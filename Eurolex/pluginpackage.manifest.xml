@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PluginPackage xmlns="http://www.sdl.com/Plugins/PluginPackage/1.0">
+  <PlugInName>Eurolex - Offline Full-text EU Law Search </PlugInName>
+  <Version>1.0.0.0</Version>
+  <Description>The plugin provides connection to the Eurolex app to perform full-text search/linguistic analysis in EU Law on translation segments in Trados Studio to assist translators/post-editors</Description>
+  <Author>Juraj Kubán</Author>
+  <RequiredProduct name="TradosStudio" minversion="17.0" maxversion="17.9"/>
+</PluginPackage>
