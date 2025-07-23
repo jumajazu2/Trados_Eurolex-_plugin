@@ -128,7 +128,7 @@ namespace Eurolex
 
             string prefixedSource = "@@@ERLX@@@" + source;
             // Clipboard.SetText(prefixedSource + "\n" + target);
-            Clipboard.SetText(prefixedSource);
+          //  Clipboard.SetText(prefixedSource);
 
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             string filePath = @"C:\Temp\segment_output.txt"; // Or any valid path

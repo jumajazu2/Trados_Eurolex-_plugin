@@ -6,6 +6,7 @@
 		<PluginDeploymentPath>$(AppData)\Trados\Trados Studio\17\Plugins</PluginDeploymentPath>
 		<SignAssembly>true</SignAssembly>
 		<AssemblyOriginatorKeyFile>EurolexKey.snk</AssemblyOriginatorKeyFile>
+		<Platforms>AnyCPU;x86</Platforms>
 	</PropertyGroup>
   <ItemGroup>
     <Reference Include="Sdl.Desktop.IntegrationApi">
