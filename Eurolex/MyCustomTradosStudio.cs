@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using System.Net.Http;               // Added
 using System.Text;                   // Added
 using System.Threading.Tasks;        // Added
+using Newtonsoft.Json;  // Add this at top with other using directives
 
 namespace Eurolex
 {
@@ -63,7 +64,7 @@ namespace Eurolex
 
         public void StartSegmentMonitoring()
         {
-            MessageBox.Show("Segment monitoring is initialized, Source Segment will be passed to Eurolex to automatically look up references in EU Law.");
+            MessageBox.Show("LegisTracerEU: Segment monitoring is initialized, Source Segment will be passed to LegisTracerEU to automatically look up references in EU Law.");
             _segmentMonitorTimer = new Timer();
             _segmentMonitorTimer.Interval = 1000;
             _segmentMonitorTimer.Tick += SegmentMonitorTimer_Tick;
@@ -117,7 +118,6 @@ namespace Eurolex
                 using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
                 {
                     var response = await _httpClient.PostAsync("/ingest", content).ConfigureAwait(false);
-                    // Optional: simple failure logging
                     if (!response.IsSuccessStatusCode)
                     {
                         System.Diagnostics.Debug.WriteLine("Ingest POST failed: " + (int)response.StatusCode + " " + response.ReasonPhrase);
@@ -132,12 +132,14 @@ namespace Eurolex
 
         private static string BuildJson(string source, string target, string segmentId, string timestamp)
         {
-            return "{"
-                 + "\"source\":\"" + JsonEscape(source) + "\","
-                 + "\"target\":\"" + JsonEscape(target) + "\","
-                 + "\"segmentId\":\"" + JsonEscape(segmentId) + "\","
-                 + "\"timestamp\":\"" + JsonEscape(timestamp) + "\""
-                 + "}";
+            var payload = new
+            {
+                source,
+                target,
+                segmentId,
+                timestamp
+            };
+            return JsonConvert.SerializeObject(payload);
         }
 
         private static string JsonEscape(string s)
