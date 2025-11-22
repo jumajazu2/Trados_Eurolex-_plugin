@@ -3,4 +3,4 @@
 
 
 
-[assembly: Plugin("Eurolex")]
+[assembly: Plugin("LegisTracerEU")]
