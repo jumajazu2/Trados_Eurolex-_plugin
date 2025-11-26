@@ -1,11 +1,12 @@
-﻿//using Sdl.Core.PluginFramework;
+﻿using Sdl.Core.PluginFramework;
 using Sdl.Desktop.IntegrationApi;
-//using Sdl.Desktop.IntegrationApi.DefaultLocations;
+using Sdl.Desktop.IntegrationApi.DefaultLocations;
 using Sdl.Desktop.IntegrationApi.Extensions;
-//using Sdl.FileTypeSupport.Framework.BilingualApi;
+using Sdl.FileTypeSupport.Framework.BilingualApi;
 using Sdl.TranslationStudioAutomation.IntegrationApi;
-//using Sdl.TranslationStudioAutomation.IntegrationApi.Extensions;
+using Sdl.TranslationStudioAutomation.IntegrationApi.Extensions;
 using Sdl.TranslationStudioAutomation.IntegrationApi.Presentation.DefaultLocations;
+using Sdl.Desktop.IntegrationApi.Interfaces;
 using System;
 using System.IO;
 using System.Windows.Forms;
@@ -149,6 +150,84 @@ namespace Eurolex
                     .Replace("\"", "\\\"")
                     .Replace("\r", "\\r")
                     .Replace("\n", "\\n");
+        }
+    }
+
+    [ViewPart(
+        Id = "LegisTracerEUResultsViewPart",
+        Name = "LegisTracerEU Results",
+        Description = "Displays processed EU Law search results")]
+    [ViewPartLayout(typeof(EditorController), Dock = DockType.Bottom)]
+    public class ResultsViewPart : AbstractViewPartController
+    {
+        private UserControl _container;
+        private WebBrowser _browser;
+
+        protected override void Initialize()
+        {
+            _container = new UserControl { Dock = DockStyle.Fill };
+            _browser = new WebBrowser
+            {
+                Dock = DockStyle.Fill,
+                AllowWebBrowserDrop = false,
+                ScriptErrorsSuppressed = true
+            };
+            
+            _container.Controls.Add(_browser);
+            
+            // Initialize content immediately
+            _container.Load += (s, e) => ShowInitialContent();
+            
+            // Also try to set content right away
+            ShowInitialContent();
+        }
+
+        protected override IUIControl GetContentControl()
+        {
+            return _container as IUIControl;
+        }
+
+        public void SetHtml(string html)
+        {
+            if (_browser == null || _browser.IsDisposed)
+                return;
+
+            try
+            {
+                if (_browser.InvokeRequired)
+                {
+                    _browser.BeginInvoke(new Action(() => SetHtmlInternal(html)));
+                }
+                else
+                {
+                    SetHtmlInternal(html);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SetHtml error: {ex.Message}");
+            }
+        }
+
+        private void SetHtmlInternal(string html)
+        {
+            if (_browser != null && !_browser.IsDisposed)
+            {
+                _browser.DocumentText = html;
+            }
+        }
+
+        public void ShowInitialContent()
+        {
+            var sb = new StringBuilder();
+            sb.Append("<html><head><meta charset='utf-8'/>");
+            sb.Append("<style>body{font-family:Segoe UI;font-size:12px;color:#222;margin:8px;} h1{font-size:16px;color:#164;} .box{margin-top:8px;padding:8px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;}</style>");
+            sb.Append("</head><body>");
+            sb.Append("<h1>LegisTracerEU Panel</h1>");
+            sb.Append("<div class='box'>This is dummy content rendered as HTML inside the panel.</div>");
+            sb.Append("<div class='box'>You can replace this with real results later.</div>");
+            sb.Append("</body></html>");
+            SetHtml(sb.ToString());
         }
     }
 }
