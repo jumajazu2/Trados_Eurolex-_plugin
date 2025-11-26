@@ -160,31 +160,67 @@ namespace Eurolex
     [ViewPartLayout(typeof(EditorController), Dock = DockType.Bottom)]
     public class ResultsViewPart : AbstractViewPartController
     {
-        private UserControl _container;
-        private WebBrowser _browser;
+        private readonly ResultsControl _control = new ResultsControl();
 
         protected override void Initialize()
         {
-            _container = new UserControl { Dock = DockStyle.Fill };
+            System.Diagnostics.Debug.WriteLine("ResultsViewPart.Initialize() called");
+            _control.ShowInitialContent();
+        }
+
+        protected override IUIControl GetContentControl()
+        {
+            return _control;
+        }
+
+        public void SetHtml(string html)
+        {
+            _control.SetHtml(html);
+        }
+    }
+
+    // New custom control class
+    public class ResultsControl : UserControl, IUIControl
+    {
+        private WebBrowser _browser;
+        private bool _isReady = false;
+        private string _pendingHtml = null;
+
+        public ResultsControl()
+        {
+            InitializeComponent();
+        }
+
+        private void InitializeComponent()
+        {
             _browser = new WebBrowser
             {
                 Dock = DockStyle.Fill,
                 AllowWebBrowserDrop = false,
                 ScriptErrorsSuppressed = true
             };
+
+            Controls.Add(_browser);
             
-            _container.Controls.Add(_browser);
-            
-            // Initialize content immediately
-            _container.Load += (s, e) => ShowInitialContent();
-            
-            // Also try to set content right away
-            ShowInitialContent();
+            // Wait for browser to be ready
+            _browser.DocumentCompleted += Browser_DocumentCompleted;
+            _browser.Navigate("about:blank");
         }
 
-        protected override IUIControl GetContentControl()
+        private void Browser_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
         {
-            return _container as IUIControl;
+            if (_browser.ReadyState == WebBrowserReadyState.Complete && e.Url.ToString() == "about:blank")
+            {
+                _browser.DocumentCompleted -= Browser_DocumentCompleted;
+                _isReady = true;
+                
+                // If there's pending HTML, set it now
+                if (_pendingHtml != null)
+                {
+                    SetHtmlInternal(_pendingHtml);
+                    _pendingHtml = null;
+                }
+            }
         }
 
         public void SetHtml(string html)
@@ -196,11 +232,19 @@ namespace Eurolex
             {
                 if (_browser.InvokeRequired)
                 {
-                    _browser.BeginInvoke(new Action(() => SetHtmlInternal(html)));
+                    _browser.BeginInvoke(new Action(() => SetHtml(html)));
                 }
                 else
                 {
-                    SetHtmlInternal(html);
+                    if (_isReady)
+                    {
+                        SetHtmlInternal(html);
+                    }
+                    else
+                    {
+                        // Browser not ready yet, save for later
+                        _pendingHtml = html;
+                    }
                 }
             }
             catch (Exception ex)
@@ -213,7 +257,15 @@ namespace Eurolex
         {
             if (_browser != null && !_browser.IsDisposed)
             {
-                _browser.DocumentText = html;
+                try
+                {
+                    _browser.DocumentText = html;
+                    System.Diagnostics.Debug.WriteLine($"HTML set successfully. Length: {html?.Length ?? 0}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"SetHtmlInternal error: {ex.Message}");
+                }
             }
         }
 
@@ -227,6 +279,8 @@ namespace Eurolex
             sb.Append("<div class='box'>This is dummy content rendered as HTML inside the panel.</div>");
             sb.Append("<div class='box'>You can replace this with real results later.</div>");
             sb.Append("</body></html>");
+            
+            System.Diagnostics.Debug.WriteLine("ShowInitialContent called");
             SetHtml(sb.ToString());
         }
     }
