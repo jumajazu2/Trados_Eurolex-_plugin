@@ -63,6 +63,20 @@ namespace Eurolex
             MessageBox.Show($"Source 1:\n{source}\n\nTarget 1:\n{target}\n\nToClipboard 1:\n{prefixedSource}\n\nID 1:\n{currentSegmentId}", "Segment Content");
         }
 
+        public static string HtmlEncode(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            return text
+                .Replace("&", "&amp;")
+                .Replace("<", "&lt;")
+                .Replace(">", "&gt;")
+                .Replace("\"", "&quot;")
+                .Replace("'", "&#39;");
+        }
+
+
         public void StartSegmentMonitoring()
         {
             MessageBox.Show("LegisTracerEU: Segment monitoring is initialized, Source Segment will be passed to LegisTracerEU to automatically look up references in EU Law.");
@@ -123,7 +137,11 @@ namespace Eurolex
                     {
                         System.Diagnostics.Debug.WriteLine("Ingest POST failed: " + (int)response.StatusCode + " " + response.ReasonPhrase);
                     }
-                }
+
+                    string responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    UpdateViewPart(segmentId, source, responseContent);
+
+                }   
             }
             catch (Exception ex)
             {
@@ -150,6 +168,75 @@ namespace Eurolex
                     .Replace("\"", "\\\"")
                     .Replace("\r", "\\r")
                     .Replace("\n", "\\n");
+        }
+
+        private static void UpdateViewPart(string segmentId, string source, string responseJson)
+        {
+            try
+            {
+                var viewPart = SdlTradosStudio.Application.GetController<ResultsViewPart>();
+                if (viewPart == null) return;
+
+                SearchResponse resp = null;
+                try
+                {
+                    resp = JsonConvert.DeserializeObject<SearchResponse>(responseJson);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("JSON parse error: " + ex.Message);
+                }
+
+                var sb = new StringBuilder();
+                sb.Append("<html><head><meta charset='utf-8'/>");
+                sb.Append("<style>");
+                sb.Append("body{font-family:Segoe UI;font-size:12px;color:#222;margin:8px;}");
+                sb.Append("h1{font-size:16px;color:#164;margin:0 0 10px;}");
+                sb.Append(".item{margin:8px 0;padding:8px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;}");
+                sb.Append(".celex{font-weight:bold;color:#036;margin-bottom:4px;} .snippet{white-space:pre-wrap;margin-top:6px;}");
+                sb.Append("</style></head><body>");
+
+                sb.Append("<h1>EU Law References</h1>");
+                sb.Append($"<div class='item'><span class='celex'>Segment:</span> {HtmlEncode(segmentId)}</div>");
+                sb.Append($"<div class='item'><span class='celex'>Source Text:</span> {HtmlEncode(source)}</div>");
+
+                if (resp == null)
+                {
+                    sb.Append("<div class='item'>Response parse error or empty response.</div>");
+                }
+                else if (resp.results == null || resp.results.Length == 0)
+                {
+                    sb.Append("<div class='item'>No results.</div>");
+                }
+                else
+                {
+                    sb.Append($"<div style='margin-top:10px;'><b>Found:</b> {HtmlEncode(resp.count.ToString())}</div>");
+                    foreach (var r in resp.results)
+                    {
+                        sb.Append("<div class='item'>");
+                        sb.Append("<div class='celex'>CELEX: ").Append(HtmlEncode(r.celex ?? "")).Append("</div>");
+                        if (!string.IsNullOrEmpty(r.lang1_result))
+                        {
+                            sb.Append("<div><strong>Lang1:</strong></div>");
+                            sb.Append("<div class='snippet'>").Append(HtmlEncode(r.lang1_result)).Append("</div>");
+                        }
+                        if (!string.IsNullOrEmpty(r.lang2_result))
+                        {
+                            sb.Append("<div style='margin-top:6px;'><strong>Lang2:</strong></div>");
+                            sb.Append("<div class='snippet'>").Append(HtmlEncode(r.lang2_result)).Append("</div>");
+                        }
+                        sb.Append("</div>");
+                    }
+                }
+
+                sb.Append("</body></html>");
+
+                viewPart.SetHtml(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"UpdateViewPart error: {ex.Message}");
+            }
         }
     }
 
@@ -283,6 +370,22 @@ namespace Eurolex
             System.Diagnostics.Debug.WriteLine("ShowInitialContent called");
             SetHtml(sb.ToString());
         }
-    }
+    
+
+    // Add this static helper method to the Eurolex namespace (e.g., near other static helpers)
+   
+}
+}// DTOs for JSON parsing (place near other internal types)
+internal class SearchResponse
+{
+    public string status { get; set; }
+    public int count { get; set; }
+    public SearchResult[] results { get; set; }
 }
 
+internal class SearchResult
+{
+    public string lang1_result { get; set; }
+    public string lang2_result { get; set; }
+    public string celex { get; set; }
+}
