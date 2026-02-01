@@ -18,10 +18,10 @@ using Newtonsoft.Json;  // Add this at top with other using directives
 namespace Eurolex
 {
     [Action("SendSegmentAction",
-        Name = "Send Segment",
-        Description = "Displays the current segment texts.")]
+        Name = "LegisTracerEU Search",
+        Description = "Search the selected text or segment in EU Law references.")]
     [ActionLayout(typeof(TranslationStudioDefaultContextMenus.EditorDocumentContextMenuLocation))]
-    [RibbonGroup("Review", Name = "Segment Send", Description = "Segment Send", ContextByType = typeof(EditorController))]
+    [RibbonGroup("Review", Name = "LegisTracerEU Search", Description = "Search the selected text or segment in EU Law references", ContextByType = typeof(EditorController))]
     [RibbonGroupLayout(LocationByType = typeof(TranslationStudioDefaultRibbonTabs.AddinsRibbonTabLocation))]
     public class SendSegmentAction : AbstractAction
     {
@@ -37,30 +37,44 @@ namespace Eurolex
         private System.Windows.Forms.Timer _segmentMonitorTimer;
         private string _lastSegmentId;
 
-        protected override void Execute()
+        protected override async void Execute()
         {
             var editorController = SdlTradosStudio.Application.GetController<EditorController>();
             if (editorController?.ActiveDocument == null)
             {
-                MessageBox.Show("No active document.");
                 return;
             }
 
             var segment = editorController.ActiveDocument.ActiveSegmentPair;
             if (segment == null)
             {
-                MessageBox.Show("No active segment.");
                 return;
             }
 
+            // Get selected text in the active segment
+            string selectedText = null;
+            bool isSource = true;
+            if (TryGetSelectedText(editorController.ActiveDocument, segment.Source?.ToString() ?? "", segment.Target?.ToString() ?? "", out selectedText, out isSource))
+            {
+                if (!string.IsNullOrWhiteSpace(selectedText))
+                {
+                    // Send the selection to the service
+                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    string segmentId = segment.Properties?.Id.Id ?? "";
+                    string target = segment.Target?.ToString() ?? "";
+
+                    await SendSegmentToIngestAsync(selectedText, target, segmentId, timestamp).ConfigureAwait(false);
+                    return;
+                }
+            }
+
+            // Fallback: no selection, send full segment
             string source = segment.Source.ToString();
-            string target = segment.Target.ToString();
-            string prefixedSource = "@@@ERLX@@@" + source;
-            var currentSegmentId = segment.Properties?.Id.Id;
-
-            Clipboard.SetText(prefixedSource);
-
-            MessageBox.Show($"Source 1:\n{source}\n\nTarget 1:\n{target}\n\nToClipboard 1:\n{prefixedSource}\n\nID 1:\n{currentSegmentId}", "Segment Content");
+            string target2 = segment.Target.ToString();
+            string timestamp2 = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string segmentId2 = segment.Properties?.Id.Id ?? "";
+            
+            await SendSegmentToIngestAsync(source, target2, segmentId2, timestamp2).ConfigureAwait(false);
         }
 
         public static string HtmlEncode(string text)
@@ -76,10 +90,26 @@ namespace Eurolex
                 .Replace("'", "&#39;");
         }
 
+        // Simple helper: encode the whole string for safety, then un-encode the
+        // encoded form of `substring` and wrap it in a highlight span.
+        public static string HighlightSubstring(string input, string substring, string highlightStyle = "background:yellow;font-weight:bold;")
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+            if (string.IsNullOrEmpty(substring)) return HtmlEncode(input);
+
+            // Encode entire input and substring
+            var encodedInput = HtmlEncode(input);
+            var encodedSub = HtmlEncode(substring);
+
+            // Replace encoded occurrences of the substring with an unencoded span that
+            // contains the encoded text (keeps content safe but allows the span to render)
+            return encodedInput.Replace(encodedSub, $"<span style=\"{highlightStyle}\">{encodedSub}</span>");
+        }
+
 
         public void StartSegmentMonitoring()
         {
-            MessageBox.Show("LegisTracerEU: Segment monitoring is initialized, Source Segment will be passed to LegisTracerEU to automatically look up references in EU Law.");
+           // MessageBox.Show("LegisTracerEU: Segment monitoring is initialized, Source Segment will be passed to LegisTracerEU to automatically look up references in EU Law.");
             _segmentMonitorTimer = new Timer();
             _segmentMonitorTimer.Interval = 1000;
             _segmentMonitorTimer.Tick += SegmentMonitorTimer_Tick;
@@ -112,13 +142,13 @@ namespace Eurolex
             string source = segment.Source?.ToString() ?? "";
             string target = segment.Target?.ToString() ?? "";
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            string filePath = @"C:\Temp\segment_output.txt";
+         //  string filePath = @"C:\Temp\segment_output.txt";
 
-            string directory = Path.GetDirectoryName(filePath);
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+          //  string directory = Path.GetDirectoryName(filePath);
+           // if (!Directory.Exists(directory))
+           // {
+           //     Directory.CreateDirectory(directory);
+           // }
 
           //  System.IO.File.WriteAllText(filePath, source);
 
@@ -196,9 +226,9 @@ namespace Eurolex
                 sb.Append(".celex{font-weight:bold;color:#036;margin-bottom:4px;} .snippet{white-space:pre-wrap;margin-top:6px;}");
                 sb.Append("</style></head><body>");
 
-                sb.Append("<h1>EU Law References</h1>");
+             //   sb.Append("<h1>EU Law References</h1>");
                 sb.Append($"<div class='item'><span class='celex'>Segment:</span> {HtmlEncode(segmentId)}</div>");
-                sb.Append($"<div class='item'><span class='celex'>Source Text:</span> {HtmlEncode(source)}</div>");
+             //   sb.Append($"<div class='item'><span class='celex'>Source Text:</span> {HtmlEncode(source)}</div>");
 
                 if (resp == null)
                 {
@@ -215,15 +245,23 @@ namespace Eurolex
                     {
                         sb.Append("<div class='item'>");
                         sb.Append("<div class='celex'>CELEX: ").Append(HtmlEncode(r.celex ?? "")).Append("</div>");
+
+                        var lang1Code = string.IsNullOrEmpty(r.lang1) ? "?" : HtmlEncode(r.lang1);
                         if (!string.IsNullOrEmpty(r.lang1_result))
                         {
-                            sb.Append("<div><strong>Lang1:</strong></div>");
-                            sb.Append("<div class='snippet'>").Append(HtmlEncode(r.lang1_result)).Append("</div>");
+                            sb.Append($"<div><strong>{lang1Code}:</strong></div>");
+                            sb.Append("<div class='snippet'>")
+                              .Append(HighlightSubstring(r.lang1_result, source))
+                              .Append("</div>");
                         }
+
+                        var lang2Code = string.IsNullOrEmpty(r.lang2) ? "?" : HtmlEncode(r.lang2);
                         if (!string.IsNullOrEmpty(r.lang2_result))
                         {
-                            sb.Append("<div style='margin-top:6px;'><strong>Lang2:</strong></div>");
-                            sb.Append("<div class='snippet'>").Append(HtmlEncode(r.lang2_result)).Append("</div>");
+                            sb.Append($"<div style='margin-top:6px;'><strong>{lang2Code}:</strong></div>");
+                            sb.Append("<div class='snippet'>")
+                              .Append(HighlightSubstring(r.lang2_result, source))
+                              .Append("</div>");
                         }
                         sb.Append("</div>");
                     }
@@ -236,6 +274,48 @@ namespace Eurolex
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"UpdateViewPart error: {ex.Message}");
+            }
+        }
+
+
+        // Get selected text using the standard Trados API approach
+        private static bool TryGetSelectedText(object activeDoc, string source, string target, out string selectedText, out bool isSource)
+        {
+            selectedText = null;
+            isSource = true;
+
+            try
+            {
+                // Cast to the correct type to access Selection.Current
+                var document = activeDoc as Sdl.TranslationStudioAutomation.IntegrationApi.IStudioDocument;
+                if (document == null)
+                    return false;
+
+                // Use Selection.Current.ToString() as shown in the IATE plugin
+                selectedText = document.Selection?.Current.ToString().TrimEnd() ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(selectedText))
+                    return false;
+
+                selectedText = selectedText.Trim();
+
+                // Determine if selection is from source or target using FocusedDocumentContent
+                if (document.FocusedDocumentContent == FocusedDocumentContent.Target)
+                {
+                    isSource = false;
+                }
+                else
+                {
+                    isSource = true;
+                }
+
+                return true;
+            }
+            catch
+            {
+                selectedText = null;
+                isSource = true;
+                return false;
             }
         }
     }
@@ -362,9 +442,9 @@ namespace Eurolex
             sb.Append("<html><head><meta charset='utf-8'/>");
             sb.Append("<style>body{font-family:Segoe UI;font-size:12px;color:#222;margin:8px;} h1{font-size:16px;color:#164;} .box{margin-top:8px;padding:8px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;}</style>");
             sb.Append("</head><body>");
-            sb.Append("<h1>LegisTracerEU Panel</h1>");
-            sb.Append("<div class='box'>This is dummy content rendered as HTML inside the panel.</div>");
-            sb.Append("<div class='box'>You can replace this with real results later.</div>");
+            sb.Append("<h1>LegisTracerEU Results Panel</h1>");
+            sb.Append("<div class='box'>When a segment is opened, it is automatically searched against EU Law.</div>");
+            sb.Append("<div class='box'>Search results appear in this pane.</div>");
             sb.Append("</body></html>");
             
             System.Diagnostics.Debug.WriteLine("ShowInitialContent called");
@@ -372,10 +452,10 @@ namespace Eurolex
         }
     
 
-    // Add this static helper method to the Eurolex namespace (e.g., near other static helpers)
+    
    
 }
-}// DTOs for JSON parsing (place near other internal types)
+}
 internal class SearchResponse
 {
     public string status { get; set; }
@@ -388,4 +468,9 @@ internal class SearchResult
     public string lang1_result { get; set; }
     public string lang2_result { get; set; }
     public string celex { get; set; }
+
+    public string lang1 { get; set; }
+    public string lang2 { get; set; }
+
+ 
 }
