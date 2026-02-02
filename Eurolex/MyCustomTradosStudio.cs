@@ -26,6 +26,7 @@ namespace Eurolex
     public class SendSegmentAction : AbstractAction
     {
         private static readonly HttpClient _httpClient = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:6175") };
+        internal static bool _iateSearchEnabled = false; // Track IATE checkbox state
 // Ensure the following using directive is present at the top of your file:
 
 
@@ -232,6 +233,20 @@ namespace Eurolex
                 sb.Append("<style>");
                 sb.Append("body{font-family:Segoe UI;font-size:24px;color:#222;margin:8px;}");
                 sb.Append("h1{font-size:32px;color:#164;margin:0 0 10px;}");
+                sb.Append(".header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#036;color:#fff;margin-bottom:16px;border-radius:4px;}");
+                sb.Append(".header h1{font-size:28px;color:#fff;margin:0;}");
+                sb.Append(".about-btn{padding:8px 16px;background:#fff;color:#036;border:none;border-radius:3px;cursor:pointer;font-size:18px;font-weight:bold;}");
+                sb.Append(".about-btn:hover{background:#f0f0f0;}");
+                sb.Append(".modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);}");
+                sb.Append(".modal-content{background:#fff;margin:10% auto;padding:24px;border-radius:8px;width:80%;max-width:600px;box-shadow:0 4px 6px rgba(0,0,0,0.3);}");
+                sb.Append(".modal-header{font-size:26px;font-weight:bold;color:#036;margin-bottom:16px;}");
+                sb.Append(".modal-body{font-size:20px;line-height:1.6;}");
+                sb.Append(".modal-body ol{margin:12px 0;padding-left:24px;}");
+                sb.Append(".modal-body li{margin:8px 0;}");
+                sb.Append(".modal-body a{color:#036;text-decoration:none;font-weight:bold;}");
+                sb.Append(".modal-body a:hover{text-decoration:underline;}");
+                sb.Append(".close-btn{float:right;font-size:32px;font-weight:bold;color:#999;cursor:pointer;line-height:20px;}");
+                sb.Append(".close-btn:hover{color:#000;}");
                 sb.Append(".item{margin:8px 0;padding:8px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;}");
                 sb.Append(".celex{font-weight:bold;color:#036;margin-bottom:4px;} .snippet{white-space:pre-wrap;margin-top:6px;}");
                 sb.Append(".search-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px;background:#fff;border:1px solid #ccc;border-radius:4px;}");
@@ -253,7 +268,7 @@ namespace Eurolex
                 sb.Append("<script>");
                 sb.Append("function toggleTerminology(cb){");
                 sb.Append("  document.body.classList.toggle('show-terminology',cb.checked);");
-                sb.Append("  localStorage.setItem('iateSearchEnabled',cb.checked);");
+                sb.Append("  window.external.SetIateEnabled(cb.checked);");
                 sb.Append("}");
                 sb.Append("function doSearch(){");
                 sb.Append("  var q=document.getElementById('searchInput').value;");
@@ -261,26 +276,68 @@ namespace Eurolex
                 sb.Append("    window.external.SearchManual(q);");
                 sb.Append("  }");
                 sb.Append("}");
-                sb.Append("function restoreCheckboxState(){");
-                sb.Append("  var enabled=localStorage.getItem('iateSearchEnabled')==='true';");
-                sb.Append("  var cb=document.getElementById('iateCheck');");
-                sb.Append("  if(cb){");
-                sb.Append("    cb.checked=enabled;");
-                sb.Append("    document.body.classList.toggle('show-terminology',enabled);");
-                sb.Append("  }");
+                sb.Append("function showAbout(e){");
+                sb.Append("  if(e){e.preventDefault();e.stopPropagation();}");
+                sb.Append("  document.getElementById('aboutModal').style.display='block';");
+                sb.Append("  return false;");
                 sb.Append("}");
-                sb.Append("window.onload=restoreCheckboxState;");
+                sb.Append("function closeAbout(e){");
+                sb.Append("  if(e){e.preventDefault();e.stopPropagation();}");
+                sb.Append("  document.getElementById('aboutModal').style.display='none';");
+                sb.Append("  return false;");
+                sb.Append("}");
+                sb.Append("document.addEventListener('click',function(e){");
+                sb.Append("  var modal=document.getElementById('aboutModal');");
+                sb.Append("  if(e.target==modal){closeAbout(e);}");
+                sb.Append("});");
                 sb.Append("</script>");
                 sb.Append("</head><body>");
+
+                // Header with title and About button
+                sb.Append("<div class='header'>");
+                sb.Append("<h1>LegisTracerEU - Full-text search in Eur-Lex and IATE</h1>");
+                sb.Append("<button class='about-btn' onclick='return showAbout(event);'>About</button>");
+                sb.Append("</div>");
+
+                // About Modal
+                sb.Append("<div id='aboutModal' class='modal' onclick='if(event.target==this)closeAbout(event);'>");
+                sb.Append("<div class='modal-content' onclick='event.stopPropagation();'>");
+                sb.Append("<span class='close-btn' onclick='return closeAbout(event);'>&times;</span>");
+                sb.Append("<div class='modal-header'>About LegisTracerEU</div>");
+                sb.Append("<div class='modal-body'>");
+                sb.Append("<p>To use this plugin to search EU law and terminology, you must have the LegisTracerEU app installed and running.</p>");
+                sb.Append("<p><strong>Follow these steps:</strong></p>");
+                sb.Append("<ol>");
+                sb.Append("<li>Install the app from Microsoft Store: <a href='https://apps.microsoft.com/detail/9NKNVGXJFSW5' target='_blank'>Download here</a></li>");
+                sb.Append("<li>Subscribe at <a href='https://www.pts-translation.sk' target='_blank'>www.pts-translation.sk</a></li>");
+                sb.Append("<li>Enter your email and Passkey in the app</li>");
+                sb.Append("</ol>");
+                sb.Append("<p>For more information, visit <a href='https://www.pts-translation.sk' target='_blank'>www.pts-translation.sk</a></p>");
+                sb.Append("</div>");
+                sb.Append("</div>");
+                sb.Append("</div>");
 
                 // Search bar with manual search and IATE checkbox
                 sb.Append("<div class='search-bar'>");
                 sb.Append("<input type='text' id='searchInput' class='search-input' placeholder='Enter search term...' />");
                 sb.Append("<button class='search-btn' onclick='doSearch()'>Search</button>");
                 sb.Append("<label class='checkbox-label'>");
-                sb.Append("<input type='checkbox' id='iateCheck' onchange='toggleTerminology(this)' /> IATE Search");
+                sb.Append("<input type='checkbox' id='iateCheck' onchange='toggleTerminology(this)'");
+                if (_iateSearchEnabled)
+                {
+                    sb.Append(" checked");
+                }
+                sb.Append(" /> IATE Search");
                 sb.Append("</label>");
                 sb.Append("</div>");
+                
+                // Add script to set initial body class based on checkbox state
+                sb.Append("<script>");
+                if (_iateSearchEnabled)
+                {
+                    sb.Append("document.body.classList.add('show-terminology');");
+                }
+                sb.Append("</script>");
 
                 // Main container
                 sb.Append("<div class='main-container'>");
@@ -555,6 +612,12 @@ namespace Eurolex
     public class ScriptCallbackHandler
     {
         private static readonly HttpClient _httpClient = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:6175") };
+
+        public void SetIateEnabled(bool enabled)
+        {
+            SendSegmentAction._iateSearchEnabled = enabled;
+            System.Diagnostics.Debug.WriteLine($"IATE search enabled set to: {enabled}");
+        }
 
         public async void SearchManual(string searchText)
         {
