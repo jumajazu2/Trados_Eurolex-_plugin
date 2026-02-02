@@ -181,6 +181,11 @@ namespace Eurolex
 
         private static string BuildJson(string source, string target, string segmentId, string timestamp)
         {
+            return BuildJsonPublic(source, target, segmentId, timestamp);
+        }
+
+        public static string BuildJsonPublic(string source, string target, string segmentId, string timestamp)
+        {
             var payload = new
             {
                 source,
@@ -202,6 +207,11 @@ namespace Eurolex
 
         private static void UpdateViewPart(string segmentId, string source, string responseJson)
         {
+            UpdateViewPartPublic(segmentId, source, responseJson);
+        }
+
+        public static void UpdateViewPartPublic(string segmentId, string source, string responseJson)
+        {
             try
             {
                 var viewPart = SdlTradosStudio.Application.GetController<ResultsViewPart>();
@@ -220,27 +230,112 @@ namespace Eurolex
                 var sb = new StringBuilder();
                 sb.Append("<html><head><meta charset='utf-8'/>");
                 sb.Append("<style>");
-                sb.Append("body{font-family:Segoe UI;font-size:12px;color:#222;margin:8px;}");
-                sb.Append("h1{font-size:16px;color:#164;margin:0 0 10px;}");
+                sb.Append("body{font-family:Segoe UI;font-size:24px;color:#222;margin:8px;}");
+                sb.Append("h1{font-size:32px;color:#164;margin:0 0 10px;}");
                 sb.Append(".item{margin:8px 0;padding:8px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;}");
                 sb.Append(".celex{font-weight:bold;color:#036;margin-bottom:4px;} .snippet{white-space:pre-wrap;margin-top:6px;}");
-                sb.Append("</style></head><body>");
+                sb.Append(".search-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px;background:#fff;border:1px solid #ccc;border-radius:4px;}");
+                sb.Append(".search-input{flex:1;padding:6px;border:1px solid #999;border-radius:3px;font-size:24px;}");
+                sb.Append(".search-btn{padding:6px 12px;background:#036;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:24px;}");
+                sb.Append(".search-btn:hover{background:#025;}");
+                sb.Append(".checkbox-label{display:flex;align-items:center;gap:4px;margin-left:auto;white-space:nowrap;}");
+                sb.Append(".main-container{display:block;}");
+                sb.Append(".results-section{width:100%;}");
+                sb.Append(".terminology-section{display:none;width:100%;height:180px;overflow-y:auto;margin:16px 0;padding:12px;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;}");
+                sb.Append(".show-terminology .terminology-section{display:block;}");
+                sb.Append(".terminology-section h3{margin:0 0 8px;font-size:28px;color:#036;}");
+                sb.Append(".term-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}");
+                sb.Append(".term-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}");
+                sb.Append(".term-item{padding:6px;background:#fff;border:1px solid #ddd;border-radius:3px;font-size:22px;}");
+                sb.Append(".term-item strong{display:block;font-size:18px;color:#036;margin-bottom:4px;}");
+                sb.Append(".segment-info{font-size:20px;color:#666;margin-bottom:8px;padding:4px;background:#fff;border:1px solid #ddd;border-radius:3px;}");
+                sb.Append("</style>");
+                sb.Append("<script>");
+                sb.Append("function toggleTerminology(cb){");
+                sb.Append("  document.body.classList.toggle('show-terminology',cb.checked);");
+                sb.Append("  localStorage.setItem('iateSearchEnabled',cb.checked);");
+                sb.Append("}");
+                sb.Append("function doSearch(){");
+                sb.Append("  var q=document.getElementById('searchInput').value;");
+                sb.Append("  if(q){");
+                sb.Append("    window.external.SearchManual(q);");
+                sb.Append("  }");
+                sb.Append("}");
+                sb.Append("function restoreCheckboxState(){");
+                sb.Append("  var enabled=localStorage.getItem('iateSearchEnabled')==='true';");
+                sb.Append("  var cb=document.getElementById('iateCheck');");
+                sb.Append("  if(cb){");
+                sb.Append("    cb.checked=enabled;");
+                sb.Append("    document.body.classList.toggle('show-terminology',enabled);");
+                sb.Append("  }");
+                sb.Append("}");
+                sb.Append("window.onload=restoreCheckboxState;");
+                sb.Append("</script>");
+                sb.Append("</head><body>");
 
-             //   sb.Append("<h1>EU Law References</h1>");
-                sb.Append($"<div class='item'><span class='celex'>Segment:</span> {HtmlEncode(segmentId)}</div>");
-             //   sb.Append($"<div class='item'><span class='celex'>Source Text:</span> {HtmlEncode(source)}</div>");
+                // Search bar with manual search and IATE checkbox
+                sb.Append("<div class='search-bar'>");
+                sb.Append("<input type='text' id='searchInput' class='search-input' placeholder='Enter search term...' />");
+                sb.Append("<button class='search-btn' onclick='doSearch()'>Search</button>");
+                sb.Append("<label class='checkbox-label'>");
+                sb.Append("<input type='checkbox' id='iateCheck' onchange='toggleTerminology(this)' /> IATE Search");
+                sb.Append("</label>");
+                sb.Append("</div>");
 
+                // Main container
+                sb.Append("<div class='main-container'>");
+                
                 if (resp == null)
                 {
+                    sb.Append("<div class='segment-info'><span style='font-weight:bold;'>Segment:</span> ").Append(HtmlEncode(segmentId)).Append("</div>");
+                    
+                    // Terminology section (hidden by default, below segment info)
+                    sb.Append("<div class='terminology-section'>");
+                    sb.Append("<h3>IATE Terminology</h3>");
+                    sb.Append("<div class='term-item' style='color:#666;font-style:italic;'>No terminology data available</div>");
+                    sb.Append("</div>");
+                    
                     sb.Append("<div class='item'>Response parse error or empty response.</div>");
                 }
                 else if (resp.results == null || resp.results.Length == 0)
                 {
+                    sb.Append("<div class='segment-info'><span style='font-weight:bold;'>Segment:</span> ").Append(HtmlEncode(segmentId)).Append("</div>");
+                    
+                    // Terminology section (hidden by default, below segment info)
+                    sb.Append("<div class='terminology-section'>");
+                    sb.Append("<h3>IATE Terminology</h3>");
+                    sb.Append("<div class='term-item' style='color:#666;font-style:italic;'>No terminology data available</div>");
+                    sb.Append("</div>");
+                    
                     sb.Append("<div class='item'>No results.</div>");
                 }
                 else
                 {
-                    sb.Append($"<div style='margin-top:10px;'><b>Found:</b> {HtmlEncode(resp.count.ToString())}</div>");
+                    sb.Append("<div class='segment-info'><span style='font-weight:bold;'>Segment:</span> ").Append(HtmlEncode(segmentId));
+                    sb.Append(" &nbsp;|&nbsp; <span style='font-weight:bold;'>Found:</span> ").Append(HtmlEncode(resp.count.ToString())).Append("</div>");
+                    
+                    // Terminology section (hidden by default, below segment info)
+                    sb.Append("<div class='terminology-section'>");
+                    sb.Append("<h3>IATE Terminology</h3>");
+                    
+                    if (resp.iate != null && resp.iate.Length > 0)
+                    {
+                        // Display actual IATE terminology results in two-column rows
+                        foreach (var iateEntry in resp.iate)
+                        {
+                            sb.Append("<div class='term-row'>");
+                            sb.Append("<div class='term-item'>").Append(HtmlEncode(iateEntry.iatesource ?? "")).Append("</div>");
+                            sb.Append("<div class='term-item'>").Append(HtmlEncode(iateEntry.iatetarget ?? "")).Append("</div>");
+                            sb.Append("</div>");
+                        }
+                    }
+                    else
+                    {
+                        sb.Append("<div class='term-item' style='color:#666;font-style:italic;'>No terminology results found</div>");
+                    }
+                    
+                    sb.Append("</div>");
+                    
                     foreach (var r in resp.results)
                     {
                         sb.Append("<div class='item'>");
@@ -266,6 +361,8 @@ namespace Eurolex
                         sb.Append("</div>");
                     }
                 }
+                
+                sb.Append("</div>"); // end main-container
 
                 sb.Append("</body></html>");
 
@@ -364,7 +461,8 @@ namespace Eurolex
             {
                 Dock = DockStyle.Fill,
                 AllowWebBrowserDrop = false,
-                ScriptErrorsSuppressed = true
+                ScriptErrorsSuppressed = true,
+                ObjectForScripting = new ScriptCallbackHandler()
             };
 
             Controls.Add(_browser);
@@ -440,7 +538,7 @@ namespace Eurolex
         {
             var sb = new StringBuilder();
             sb.Append("<html><head><meta charset='utf-8'/>");
-            sb.Append("<style>body{font-family:Segoe UI;font-size:12px;color:#222;margin:8px;} h1{font-size:16px;color:#164;} .box{margin-top:8px;padding:8px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;}</style>");
+            sb.Append("<style>body{font-family:Segoe UI;font-size:24px;color:#222;margin:8px;} h1{font-size:32px;color:#164;} .box{margin-top:8px;padding:8px;border:1px solid #ddd;border-radius:4px;background:#f9f9f9;}</style>");
             sb.Append("</head><body>");
             sb.Append("<h1>LegisTracerEU Results Panel</h1>");
             sb.Append("<div class='box'>When a segment is opened, it is automatically searched against EU Law.</div>");
@@ -450,17 +548,64 @@ namespace Eurolex
             System.Diagnostics.Debug.WriteLine("ShowInitialContent called");
             SetHtml(sb.ToString());
         }
-    
+    }
+
+    // COM-visible class to handle JavaScript callbacks
+    [System.Runtime.InteropServices.ComVisibleAttribute(true)]
+    public class ScriptCallbackHandler
+    {
+        private static readonly HttpClient _httpClient = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:6175") };
+
+        public async void SearchManual(string searchText)
+        {
+            if (string.IsNullOrWhiteSpace(searchText))
+                return;
+
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"Manual search triggered for: {searchText}");
+                
+                // Get the editor controller to retrieve segment ID
+                var editorController = SdlTradosStudio.Application.GetController<EditorController>();
+                var activeDoc = editorController?.ActiveDocument;
+                var segment = activeDoc?.ActiveSegmentPair;
+                
+                string segmentId = segment?.Properties?.Id.Id ?? "manual-search";
+                string target = segment?.Target?.ToString() ?? "";
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                // Build JSON payload using the same method
+                string json = SendSegmentAction.BuildJsonPublic(searchText, target, segmentId, timestamp);
+                
+                using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
+                {
+                    var response = await _httpClient.PostAsync("/ingest", content).ConfigureAwait(false);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Manual search POST failed: " + (int)response.StatusCode + " " + response.ReasonPhrase);
+                    }
+
+                    string responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    SendSegmentAction.UpdateViewPartPublic(segmentId, searchText, responseContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Manual search exception: {ex.Message}");
+            }
+        }
+    }
 
     
    
 }
-}
+
 internal class SearchResponse
 {
     public string status { get; set; }
     public int count { get; set; }
     public SearchResult[] results { get; set; }
+    public IATEResult[] iate { get; set; }
 }
 
 internal class SearchResult
@@ -471,6 +616,10 @@ internal class SearchResult
 
     public string lang1 { get; set; }
     public string lang2 { get; set; }
+}
 
- 
+internal class IATEResult
+{
+    public string iatesource { get; set; }
+    public string iatetarget { get; set; }
 }
