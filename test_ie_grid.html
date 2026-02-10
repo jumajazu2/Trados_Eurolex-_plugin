@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8'/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<style>
+body{font-family:Segoe UI;font-size:24px;color:#222;padding:20px;}
+
+/* Test CSS Grid */
+.term-row-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    gap:8px;
+    margin-bottom:8px;
+    border:2px solid blue;
+}
+
+/* Alternative using Table Display */
+.term-row-table{
+    display:table;
+    width:100%;
+    margin-bottom:8px;
+    border:2px solid green;
+}
+
+.term-item{
+    padding:6px;
+    background:#fff;
+    border:1px solid #ddd;
+    border-radius:3px;
+    font-size:22px;
+}
+
+.term-item-table{
+    display:table-cell;
+    width:40%;
+    padding:6px;
+    background:#fff;
+    border:1px solid #ddd;
+}
+
+.term-meta{
+    padding:6px;
+    background:#fff;
+    border:1px solid #ddd;
+    border-radius:3px;
+    font-size:14px;
+    color:#888;
+    font-style:italic;
+}
+
+.term-meta-table{
+    display:table-cell;
+    width:20%;
+    padding:6px;
+    background:#fff;
+    border:1px solid #ddd;
+    font-size:14px;
+    color:#888;
+    font-style:italic;
+}
+</style>
+</head>
+<body>
+
+<h2>Test 1: CSS Grid (Blue Border)</h2>
+<div class='term-row-grid'>
+<div class='term-item'>patch test</div>
+<div class='term-item'>epikutánny test</div>
+<div class='term-meta'>ID: 1354346</div>
+</div>
+
+<h2>Test 2: Table Display (Green Border)</h2>
+<div class='term-row-table'>
+<div class='term-item-table'>patch test</div>
+<div class='term-item-table'>epikutánny test</div>
+<div class='term-meta-table'>ID: 1354346</div>
+</div>
+
+<p><strong>Expected:</strong> Both should show 3 columns horizontally</p>
+<p><strong>If vertical:</strong> IE doesn't support CSS Grid, use Table method instead</p>
+
+</body>
+</html>

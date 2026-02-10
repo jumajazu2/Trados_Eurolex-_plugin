@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8'/>
+<style>
+body{font-family:Segoe UI;font-size:24px;color:#222;margin:8px;padding:20px;}
+.terminology-section{width:100%;height:300px;overflow-y:auto;margin:16px 0;padding:12px;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;}
+.terminology-section h3{margin:0 0 8px;font-size:28px;color:#036;}
+.term-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;border:2px solid red;}
+.term-item{padding:6px;background:#fff;border:1px solid #ddd;border-radius:3px;font-size:22px;}
+.term-meta{padding:6px;background:#fff;border:1px solid #ddd;border-radius:3px;font-size:14px;color:#888;font-style:italic;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<h2>IATE Three-Column Layout Test</h2>
+
+<div class='terminology-section'>
+<h3>IATE Terminology</h3>
+
+<div class='term-row'>
+<div class='term-item'>patch test, test patch</div>
+<div class='term-item'>epikutánny test, náplasovı test</div>
+<div class='term-meta'>ID: 1354346<br/>illness;medical science</div>
+</div>
+
+<div class='term-row'>
+<div class='term-item'>stress test</div>
+<div class='term-item'>záaovı test, stresovı test</div>
+<div class='term-meta'>ID: 3504768<br/>economic policy;FINANCE</div>
+</div>
+
+<div class='term-row'>
+<div class='term-item'>tuberculin tests</div>
+<div class='term-item'>tuberkulínovı test, tuberkulinaènı test</div>
+<div class='term-meta'>ID: 1687885<br/>medical science</div>
+</div>
+
+<div class='term-row'>
+<div class='term-item'>functional test</div>
+<div class='term-item'>test funkènosti, funkènı test</div>
+<div class='term-meta'>ID: 3517833<br/>air transport</div>
+</div>
+
+</div>
+
+<p><strong>Expected layout:</strong> Each term-row should display horizontally with three columns: EN term | SK term | Metadata</p>
+
+</body>
+</html>

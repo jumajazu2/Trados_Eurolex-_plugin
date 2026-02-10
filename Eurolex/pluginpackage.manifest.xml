@@ -4,5 +4,5 @@
   <Version>1.0.0.1</Version>
   <Description>The plugin provides connection to the LegisTracerEU app to perform full-text search/linguistic analysis in EU Law on translation segments in Trados Studio to assist translators/post-editors</Description>
   <Author>Juraj Kubán</Author>
-  <RequiredProduct name="TradosStudio" minversion="17.0"/>
+  <RequiredProduct name="TradosStudio" minversion="15.0"/>
 </PluginPackage>
