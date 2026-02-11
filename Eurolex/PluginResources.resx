@@ -118,8 +118,14 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="icon_16.png" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\icon_16.png.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="LegisTracerEU_Icon_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>icon_16c.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="LegisTracerEU_Icon_64" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>icon_64c.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="LegisTracerEU_Icon_32" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>icon_32c.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="Plugin_Name" xml:space="preserve">
     <value>Eurolex</value>

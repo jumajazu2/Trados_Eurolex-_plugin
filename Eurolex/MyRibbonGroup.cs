@@ -15,8 +15,10 @@ namespace Eurolex
     {
     }
 
-    [Action("LegisTracerEURibbonSearchAction", 
-        Name = "LegisTracerEU Search")]
+    [Action("LegisTracerEURibbonSearchAction",
+        Name = "LegisTracerEU Search",
+        Description = "Search EU Law and Terminology",
+        Icon = "LegisTracerEU_Icon_64")]
     [ActionLayout(typeof(LegisTracerEURibbonGroup), 10, DisplayType.Large)]
     public class LegisTracerEURibbonAction : AbstractAction
     {

@@ -10,13 +10,6 @@
 		<AssemblyName>LegisTracerEU</AssemblyName>
 		<RootNamespace>Eurolex</RootNamespace>
 	</PropertyGroup>
-	<ItemGroup>
-	  <None Remove="icon_16.png" />
-	  <None Remove="icon_32.png" />
-	  <None Remove="Resources\icon_16.png" />
-	  <None Remove="Resources\icon_16.png.ico" />
-	  <None Remove="Resources\icon_32.png" />
-	</ItemGroup>
   <ItemGroup>
     <Reference Include="Sdl.Desktop.IntegrationApi">
       <HintPath>$(MSBuildProgramFiles32)\Trados\Trados Studio\Studio17\Sdl.Desktop.IntegrationApi.dll</HintPath>
@@ -58,10 +51,13 @@
 	  <None Include="Properties\AssemblyInfo.cs" />
 	  <None Include="Properties\PluginProperties.cs" />
 	</ItemGroup>
-  <ItemGroup>
-	  <None Include="PluginResources.resx" />
+	<ItemGroup>
 	  <None Include="pluginpackage.manifest.xml" />
-  </ItemGroup>
+	</ItemGroup>
+	<ItemGroup>
+	  <Resource Include="icon_16.ico" />
+	  <Resource Include="icon_32.ico" />
+	</ItemGroup>
   <ItemGroup>
   	<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   	<PackageReference Include="Sdl.Core.PluginFramework">
@@ -72,21 +68,17 @@
   	</PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="icon_16.png">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="icon_32.png">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\icon_16.png">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\icon_16.png.ico">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Resources\icon_32.png">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
+    <Compile Update="PluginResources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>PluginResources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="PluginResources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>PluginResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>
     <CreatePluginPackage>true</CreatePluginPackage>

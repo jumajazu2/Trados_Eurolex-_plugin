@@ -13,13 +13,15 @@ using System.Windows.Forms;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Drawing;
+using System.Drawing.Imaging;
 using Newtonsoft.Json;
 
 namespace Eurolex
 {
     [Action("LegisTracerEUSearchAction",
         Name = "LegisTracerEU Search",
-        Description = "Search the selected text or segment in EU Law references.")]
+        Description = "Search the selected text or segment in EU Law references.", Icon = "LegisTracerEU_Icon_32")] //Icon = "LegisTracerEU_Icon_32" when this is added, critical failure, studio failed to start, error: Failed to add window command bar extensions
     [ActionLayout(typeof(TranslationStudioDefaultContextMenus.EditorDocumentContextMenuLocation), 20, DisplayType.Large)]
     public class SendSegmentAction : AbstractAction
     {
@@ -29,6 +31,9 @@ namespace Eurolex
         internal static string _searchScope = "all";
         private System.Windows.Forms.Timer _segmentMonitorTimer;
         private string _lastSegmentId;
+        private static readonly Lazy<string> _headerIconDataUri = new Lazy<string>(BuildHeaderIconDataUri);
+
+        private static string HeaderIconDataUri => _headerIconDataUri.Value;
 
         protected override async void Execute()
         {
@@ -98,6 +103,32 @@ namespace Eurolex
             // Replace encoded occurrences of the substring with an unencoded span that
             // contains the encoded text (keeps content safe but allows the span to render)
             return encodedInput.Replace(encodedSub, $"<span style=\"{highlightStyle}\">{encodedSub}</span>");
+        }
+
+        private static string BuildHeaderIconDataUri()
+        {
+            try
+            {
+                using (var icon = PluginResources.LegisTracerEU_Icon_32)
+                {
+                    if (icon == null)
+                    {
+                        return string.Empty;
+                    }
+
+                    using (var bitmap = icon.ToBitmap())
+                    using (var ms = new MemoryStream())
+                    {
+                        bitmap.Save(ms, ImageFormat.Png);
+                        return "data:image/png;base64," + Convert.ToBase64String(ms.ToArray());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Header icon conversion error: {ex.Message}");
+                return string.Empty;
+            }
         }
 
 
@@ -206,12 +237,15 @@ namespace Eurolex
                 if (viewPart == null) return;
 
                 var sb = new StringBuilder();
+                var headerIconSrc = HeaderIconDataUri;
                 sb.Append("<html><head><meta charset='utf-8'/>");
                 sb.Append("<style>");
                 sb.Append("body{font-family:Segoe UI;font-size:24px;color:#222;margin:8px;}");
                 sb.Append("h1{font-size:32px;color:#164;margin:0 0 10px;}");
-                sb.Append(".header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#036;color:#fff;margin-bottom:16px;border-radius:4px;}");
+                sb.Append(".header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#0F2A44;color:#fff;margin-bottom:16px;border-radius:4px;}");
                 sb.Append(".header h1{font-size:28px;color:#fff;margin:0;}");
+                sb.Append(".title-wrapper{display:flex;align-items:center;}");
+                sb.Append(".header-icon{width:32px;height:32px;margin-right:16px;}");
                 sb.Append(".about-btn{padding:8px 16px;background:#fff;color:#036;border:none;border-radius:3px;cursor:pointer;font-size:18px;font-weight:bold;}");
                 sb.Append(".about-btn:hover{background:#f0f0f0;}");
                 sb.Append(".modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);}");
@@ -226,8 +260,8 @@ namespace Eurolex
                 sb.Append(".close-btn:hover{color:#000;}");
                 sb.Append(".search-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px;background:#fff;border:1px solid #ccc;border-radius:4px;}");
                 sb.Append(".search-input{flex:1;padding:6px;border:1px solid #999;border-radius:3px;font-size:24px;}");
-                sb.Append(".search-btn{padding:6px 12px;background:#036;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:24px;}");
-                sb.Append(".search-btn:hover{background:#025;}");
+                sb.Append(".search-btn{padding:6px 12px;background:#0F2A44;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:24px;}");
+                sb.Append(".search-btn:hover{background:#0C1F32;}");
                 sb.Append(".ready-message{padding:24px;text-align:center;color:#666;font-size:20px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;margin:20px 0;}");
                 sb.Append("</style>");
                 sb.Append("<script>");
@@ -263,7 +297,13 @@ namespace Eurolex
 
                 // Header with title and About button
                 sb.Append("<div class='header'>");
+                sb.Append("<div class='title-wrapper'>");
+                if (!string.IsNullOrEmpty(headerIconSrc))
+                {
+                    sb.Append("<img class='header-icon' src='").Append(headerIconSrc).Append("' alt='LegisTracerEU Icon' />");
+                }
                 sb.Append("<h1>LegisTracerEU - Search Eur-Lex and IATE</h1>");
+                sb.Append("</div>");
                 sb.Append("<button class='about-btn' onclick='return showAbout(event);'>About</button>");
                 sb.Append("</div>");
 
@@ -326,12 +366,15 @@ namespace Eurolex
                 }
 
                 var sb = new StringBuilder();
+                var headerIconSrc = HeaderIconDataUri;
                 sb.Append("<html><head><meta charset='utf-8'/>");
                 sb.Append("<style>");
                 sb.Append("body{font-family:Segoe UI;font-size:24px;color:#222;margin:8px;}");
                 sb.Append("h1{font-size:32px;color:#164;margin:0 0 10px;}");
-                sb.Append(".header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#036;color:#fff;margin-bottom:16px;border-radius:4px;}");
+                sb.Append(".header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#0F2A44;color:#fff;margin-bottom:16px;border-radius:4px;}");
                 sb.Append(".header h1{font-size:28px;color:#fff;margin:0;}");
+                sb.Append(".title-wrapper{display:flex;align-items:center;}");
+                sb.Append(".header-icon{width:32px;height:32px;margin-right:16px;}");
                 sb.Append(".about-btn{padding:8px 16px;background:#fff;color:#036;border:none;border-radius:3px;cursor:pointer;font-size:18px;font-weight:bold;}");
                 sb.Append(".about-btn:hover{background:#f0f0f0;}");
                 sb.Append(".modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);}");
@@ -348,8 +391,8 @@ namespace Eurolex
                 sb.Append(".celex{font-weight:bold;color:#036;margin-bottom:4px;word-wrap:break-word;} .snippet{white-space:pre-wrap;margin-top:6px;word-wrap:break-word;overflow-wrap:break-word;}");
                 sb.Append(".search-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px;background:#fff;border:1px solid #ccc;border-radius:4px;}");
                 sb.Append(".search-input{flex:1;padding:6px;border:1px solid #999;border-radius:3px;font-size:24px;}");
-                sb.Append(".search-btn{padding:6px 12px;background:#036;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:24px;}");
-                sb.Append(".search-btn:hover{background:#025;}");
+                sb.Append(".search-btn{padding:6px 12px;background:#0F2A44;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:24px;}");
+                sb.Append(".search-btn:hover{background:#0C1F32;}");
                 sb.Append(".checkbox-label{display:inline-flex;align-items:center;gap:4px;margin-left:12px;white-space:nowrap;}");
                 sb.Append(".scope-switch{display:inline-flex;align-items:center;gap:6px;margin-left:12px;padding:4px 8px;background:#f0f0f0;border-radius:3px;font-size:18px;}");
                 sb.Append(".scope-switch select{padding:2px 6px;border:1px solid #999;border-radius:3px;font-size:18px;background:#fff;cursor:pointer;}");
@@ -413,7 +456,13 @@ namespace Eurolex
 
                 // Header with title and About button
                 sb.Append("<div class='header'>");
+                sb.Append("<div class='title-wrapper'>");
+                if (!string.IsNullOrEmpty(headerIconSrc))
+                {
+                    sb.Append("<img class='header-icon' src='").Append(headerIconSrc).Append("' alt='LegisTracerEU Icon' />");
+                }
                 sb.Append("<h1>LegisTracerEU - Search Eur-Lex and IATE</h1>");
+                sb.Append("</div>");
                 sb.Append("<button class='about-btn' onclick='return showAbout(event);'>About</button>");
                 sb.Append("</div>");
 
@@ -431,7 +480,7 @@ namespace Eurolex
                 sb.Append("<li>Enter your email and Passkey in the app</li>");
                 sb.Append("</ol>");
                 sb.Append("<p>For more information, visit <a href='#' onclick='window.external.OpenUrl(\"https://www.pts-translation.sk\");return false;'>www.pts-translation.sk</a></p>");
-                sb.Append("<p style='margin-top:16px;font-size:14px;color:#888;font-style:italic;'>Release version 1.0.0</p>");
+                sb.Append("<p style='margin-top:16px;font-size:14px;color:#888;font-style:italic;'>Release version 1.0.3</p>");
                 sb.Append("</div>");
                 sb.Append("</div>");
                 sb.Append("</div>");
@@ -707,7 +756,8 @@ namespace Eurolex
     [ViewPart(
         Id = "LegisTracerEUResultsViewPart",
         Name = "LegisTracerEU Results",
-        Description = "Displays processed EU Law search results")]
+        Description = "Displays processed EU Law search results",
+        Icon = "LegisTracerEU_Icon_32")]
     [ViewPartLayout(typeof(EditorController), Dock = DockType.Bottom)]
     public class ResultsViewPart : AbstractViewPartController
     {
