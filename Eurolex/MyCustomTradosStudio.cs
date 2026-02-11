@@ -245,11 +245,11 @@ namespace Eurolex
                 sb.Append(".header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#0F2A44;color:#fff;margin-bottom:16px;border-radius:4px;}");
                 sb.Append(".header h1{font-size:28px;color:#fff;margin:0;}");
                 sb.Append(".title-wrapper{display:flex;align-items:center;}");
-                sb.Append(".header-icon{width:32px;height:32px;margin-right:16px;}");
+                sb.Append(".header-icon{width:32px;height:32px;margin-right:16px;flex-shrink:0;}");
                 sb.Append(".about-btn{padding:8px 16px;background:#fff;color:#036;border:none;border-radius:3px;cursor:pointer;font-size:18px;font-weight:bold;}");
                 sb.Append(".about-btn:hover{background:#f0f0f0;}");
                 sb.Append(".modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);}");
-                sb.Append(".modal-content{background:#fff;margin:10% auto;padding:24px;border-radius:8px;width:80%;max-width:600px;box-shadow:0 4px 6px rgba(0,0,0,0.3);}");
+                sb.Append(".modal-content{background:#fff;margin:10% auto;padding:24px;border-radius:8px;width:80%;max-width=600px;box-shadow:0 4px 6px rgba(0,0,0,0.3);}");
                 sb.Append(".modal-header{font-size:26px;font-weight:bold;color:#036;margin-bottom:16px;}");
                 sb.Append(".modal-body{font-size:20px;line-height:1.6;}");
                 sb.Append(".modal-body ol{margin:12px 0;padding-left:24px;}");
@@ -300,9 +300,9 @@ namespace Eurolex
                 sb.Append("<div class='title-wrapper'>");
                 if (!string.IsNullOrEmpty(headerIconSrc))
                 {
-                    sb.Append("<img class='header-icon' src='").Append(headerIconSrc).Append("' alt='LegisTracerEU Icon' />");
+                    sb.Append("<div class='header-icon' style='background-image: url(\"").Append(headerIconSrc).Append("\"); background-size: contain; background-repeat: no-repeat;'></div>");
                 }
-                sb.Append("<h1>LegisTracerEU - Search Eur-Lex and IATE</h1>");
+                sb.Append("<h1>LegisTracerEU: Search Eur-Lex/IATE</h1>");
                 sb.Append("</div>");
                 sb.Append("<button class='about-btn' onclick='return showAbout(event);'>About</button>");
                 sb.Append("</div>");
@@ -374,7 +374,7 @@ namespace Eurolex
                 sb.Append(".header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#0F2A44;color:#fff;margin-bottom:16px;border-radius:4px;}");
                 sb.Append(".header h1{font-size:28px;color:#fff;margin:0;}");
                 sb.Append(".title-wrapper{display:flex;align-items:center;}");
-                sb.Append(".header-icon{width:32px;height:32px;margin-right:16px;}");
+                sb.Append(".header-icon{width:32px;height:32px;margin-right:16px;flex-shrink:0;}");
                 sb.Append(".about-btn{padding:8px 16px;background:#fff;color:#036;border:none;border-radius:3px;cursor:pointer;font-size:18px;font-weight:bold;}");
                 sb.Append(".about-btn:hover{background:#f0f0f0;}");
                 sb.Append(".modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);}");
@@ -399,7 +399,6 @@ namespace Eurolex
                 sb.Append(".eurlex-results{display:block;overflow-x:hidden;}");
                 sb.Append(".hide-eurlex .eurlex-results{display:none;}");
                 sb.Append(".main-container{display:block;overflow-x:hidden;box-sizing:border-box;}");
-
                 sb.Append(".results-section{width:100%;}");
                 sb.Append(".terminology-section{display:none;width:100%;max-height:400px;overflow-y:auto;overflow-x:hidden;margin:16px 0;padding:12px;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;}");
                 sb.Append(".show-terminology .terminology-section{display:block;}");
@@ -459,7 +458,7 @@ namespace Eurolex
                 sb.Append("<div class='title-wrapper'>");
                 if (!string.IsNullOrEmpty(headerIconSrc))
                 {
-                    sb.Append("<img class='header-icon' src='").Append(headerIconSrc).Append("' alt='LegisTracerEU Icon' />");
+                    sb.Append("<div class='header-icon' style='background-image: url(\"").Append(headerIconSrc).Append("\"); background-size: contain; background-repeat: no-repeat;'></div>");
                 }
                 sb.Append("<h1>LegisTracerEU - Search Eur-Lex and IATE</h1>");
                 sb.Append("</div>");
@@ -503,7 +502,7 @@ namespace Eurolex
                 {
                     sb.Append("<div class='segment-info'>");
                     sb.Append("<span><span style='font-weight:bold;'>Segment:</span> ").Append(HtmlEncode(segmentId)).Append("</span>");
-                    sb.Append("<div style='display:flex;align-items:center;gap:8px;'>");
+                    sb.Append("<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>");
                     sb.Append("<label class='checkbox-label'>");
                     sb.Append("<input type='checkbox' id='eurlexCheck' onchange='toggleEurlex(this)'");
                     if (_eurlexSearchEnabled)
@@ -541,7 +540,7 @@ namespace Eurolex
                 {
                     sb.Append("<div class='segment-info'>");
                     sb.Append("<span><span style='font-weight:bold;'>Segment:</span> ").Append(HtmlEncode(segmentId)).Append("</span>");
-                    sb.Append("<div style='display:flex;align-items:center;gap:8px;'>");
+                    sb.Append("<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>");
                     sb.Append("<label class='checkbox-label'>");
                     sb.Append("<input type='checkbox' id='eurlexCheck' onchange='toggleEurlex(this)'");
                     if (_eurlexSearchEnabled)
@@ -580,7 +579,7 @@ namespace Eurolex
                     sb.Append("<div class='segment-info'>");
                     sb.Append("<span><span style='font-weight:bold;'>Segment:</span> ").Append(HtmlEncode(segmentId));
                     sb.Append(" &nbsp;|&nbsp; <span style='font-weight:bold;'>Found:</span> ").Append(HtmlEncode(resp.count.ToString())).Append("</span>");
-                    sb.Append("<div style='display:flex;align-items:center;gap:8px;'>");
+                    sb.Append("<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>");
                     sb.Append("<label class='checkbox-label'>");
                     sb.Append("<input type='checkbox' id='eurlexCheck' onchange='toggleEurlex(this)'");
                     if (_eurlexSearchEnabled)
@@ -595,7 +594,7 @@ namespace Eurolex
                     {
                         sb.Append(" checked");
                     }
-                    sb.Append(" /> IATE Search");
+                    sb.Append(" /> Search IATE");
                     sb.Append("</label>");
                     sb.Append("<div class='scope-switch'>");
                     sb.Append("<select onchange='changeSearchScope(this)'>");
