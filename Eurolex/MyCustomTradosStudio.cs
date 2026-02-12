@@ -333,7 +333,7 @@ namespace Eurolex
 
                 sb.Append("<div class='ready-message'>");
                 sb.Append("<p style='font-size:24px;margin:0 0 12px;'><strong>Ready to search</strong></p>");
-                sb.Append("<p style='margin:0;'>Navigate to a segment to see automatic results, or use the search bar above.</p>");
+                sb.Append("<p style='margin:0;'>Navigate to a segment to see automatic results, use the search bar above or make a text selection and use the context menu to search for it.</p>");
                 sb.Append("</div>");
 
                 sb.Append("</body></html>");
