@@ -1,4 +1,4 @@
-﻿using Sdl.Core.PluginFramework;
+using Sdl.Core.PluginFramework;
 using Sdl.Desktop.IntegrationApi;
 using Sdl.Desktop.IntegrationApi.DefaultLocations;
 using Sdl.Desktop.IntegrationApi.Extensions;
@@ -21,11 +21,11 @@ namespace Eurolex
 {
     [Action("LegisTracerEUSearchAction",
         Name = "LegisTracerEU Search",
-        Description = "Search the selected text or segment in EU Law references.", Icon = "LegisTracerEU_Icon_32")] //Icon = "LegisTracerEU_Icon_32" when this is added, critical failure, studio failed to start, error: Failed to add window command bar extensions
+        Description = "Search the selected text or segment in EU Law references.", Icon = "LegisTracerEU_Icon_32")]
     [ActionLayout(typeof(TranslationStudioDefaultContextMenus.EditorDocumentContextMenuLocation), 20, DisplayType.Large)]
     public class SendSegmentAction : AbstractAction
     {
-        private static readonly HttpClient _httpClient = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:6175") };
+        private static readonly HttpClient _httpClient = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:6175"), Timeout = TimeSpan.FromSeconds(5) };
         internal static bool _iateSearchEnabled = true;
         internal static bool _eurlexSearchEnabled = true;
         internal static string _searchScope = "all";
@@ -61,7 +61,7 @@ namespace Eurolex
                     string segmentId = segment.Properties?.Id.Id ?? "";
                     string target = segment.Target?.ToString() ?? "";
 
-                    await SendSegmentToIngestAsync(selectedText, target, segmentId, timestamp).ConfigureAwait(false);
+                    await SendSegmentToIngestAsync(selectedText, target, segmentId, timestamp, isManualSearch: true).ConfigureAwait(false);
                     return;
                 }
             }
@@ -72,7 +72,7 @@ namespace Eurolex
             string timestamp2 = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             string segmentId2 = segment.Properties?.Id.Id ?? "";
             
-            await SendSegmentToIngestAsync(source, target2, segmentId2, timestamp2).ConfigureAwait(false);
+            await SendSegmentToIngestAsync(source, target2, segmentId2, timestamp2, isManualSearch: true).ConfigureAwait(false);
         }
 
         public static string HtmlEncode(string text)
@@ -170,11 +170,14 @@ namespace Eurolex
             await SendSegmentToIngestAsync(source, target, currentSegmentId, timestamp).ConfigureAwait(false);
         }
 
-        private static async Task SendSegmentToIngestAsync(string source, string target, string segmentId, string timestamp)
+        public static Task SendSegmentToIngestPublicAsync(string source, string target, string segmentId, string timestamp, bool isManualSearch = false)
+            => SendSegmentToIngestAsync(source, target, segmentId, timestamp, isManualSearch);
+
+        private static async Task SendSegmentToIngestAsync(string source, string target, string segmentId, string timestamp, bool isManualSearch = false)
         {
             try
             {
-                string json = BuildJson(source, target, segmentId, timestamp, isManualSearch: false);
+                string json = BuildJson(source, target, segmentId, timestamp, isManualSearch);
                 using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
                 {
                     var response = await _httpClient.PostAsync("/ingest", content).ConfigureAwait(false);
@@ -184,14 +187,33 @@ namespace Eurolex
                     }
 
                     string responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    UpdateViewPart(segmentId, source, responseContent);
-
-                }   
+                    RunOnUiThread(() => UpdateViewPart(segmentId, source, responseContent));
+                }
+            }
+            catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine("Ingest POST exception: " + ex.Message);
+                RunOnUiThread(() => DisplayError(segmentId, BuildConnectionErrorHtml()));
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("Ingest POST exception: " + ex.Message);
             }
+        }
+
+        private static string BuildConnectionErrorHtml()
+        {
+            string errorHtml = "Your request could not be processed.<br/><br/>Make sure the LegisTracerEU app is installed on your computer and running.";
+            errorHtml += "<div style='text-align:left;margin-top:16px;'>";
+            errorHtml += "<p><strong>Follow these steps:</strong></p>";
+            errorHtml += "<ol>";
+            errorHtml += "<li>Install the app from Microsoft Store: <a href='#' onclick='window.external.OpenUrl(\"https://apps.microsoft.com/detail/9NKNVGXJFSW5\");return false;'>Download here</a></li>";
+            errorHtml += "<li>Subscribe at <a href='#' onclick='window.external.OpenUrl(\"https://www.pts-translation.sk\");return false;'>www.pts-translation.sk</a></li>";
+            errorHtml += "<li>Enter your email and Passkey in the app</li>";
+            errorHtml += "</ol>";
+            errorHtml += "<p>For more information, visit <a href='#' onclick='window.external.OpenUrl(\"https://www.pts-translation.sk\");return false;'>www.pts-translation.sk</a></p>";
+            errorHtml += "</div>";
+            return errorHtml;
         }
 
         private static string BuildJson(string source, string target, string segmentId, string timestamp, bool isManualSearch)
@@ -222,6 +244,17 @@ namespace Eurolex
                     .Replace("\"", "\\\"")
                     .Replace("\r", "\\r")
                     .Replace("\n", "\\n");
+        }
+
+        private static void RunOnUiThread(Action action)
+        {
+            var form = System.Windows.Forms.Application.OpenForms.Count > 0
+                ? System.Windows.Forms.Application.OpenForms[0]
+                : null;
+            if (form != null && form.InvokeRequired)
+                form.BeginInvoke(action);
+            else
+                action();
         }
 
         private static void UpdateViewPart(string segmentId, string source, string responseJson)
@@ -307,6 +340,7 @@ namespace Eurolex
                 sb.Append("<button class='about-btn' onclick='return showAbout(event);'>About</button>");
                 sb.Append("</div>");
 
+
                 // About Modal
                 sb.Append("<div id='aboutModal' class='modal' onclick='if(event.target==this)closeAbout(event);'>");
                 sb.Append("<div class='modal-content' onclick='event.stopPropagation();'>");
@@ -321,7 +355,7 @@ namespace Eurolex
                 sb.Append("<li>Enter your email and Passkey in the app</li>");
                 sb.Append("</ol>");
                 sb.Append("<p>For more information, visit <a href='#' onclick='window.external.OpenUrl(\"https://www.pts-translation.sk\");return false;'>www.pts-translation.sk</a></p>");
-                sb.Append("<p style='margin-top:16px;font-size:14px;color:#888;font-style:italic;'>Release version 1.0.0</p>");
+                sb.Append("<p style='margin-top:16px;font-size:14px;color:#888;font-style:italic;'>Release version 1.0.4</p>");
                 sb.Append("</div>");
                 sb.Append("</div>");
                 sb.Append("</div>");
@@ -343,6 +377,151 @@ namespace Eurolex
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"RenderInitialUI error: {ex.Message}");
+            }
+        }
+
+        public static void DisplayError(string segmentId, string errorMessage)
+        {
+            try
+            {
+                var viewPart = SdlTradosStudio.Application.GetController<ResultsViewPart>();
+                if (viewPart == null) return;
+
+                var sb = new StringBuilder();
+                var headerIconSrc = HeaderIconDataUri;
+                sb.Append("<html><head><meta charset='utf-8'/>");
+                sb.Append("<style>");
+                sb.Append("body{font-family:Segoe UI;font-size:24px;color:#222;margin:8px;}");
+                sb.Append("h1{font-size:32px;color:#164;margin:0 0 10px;}");
+                sb.Append(".header{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#0F2A44;color:#fff;margin-bottom:16px;border-radius:4px;}");
+                sb.Append(".header h1{font-size:28px;color:#fff;margin:0;}");
+                sb.Append(".title-wrapper{display:flex;align-items:center;}");
+                sb.Append(".header-icon{width:32px;height:32px;margin-right:16px;flex-shrink:0;}");
+                sb.Append(".about-btn{padding:8px 16px;background:#fff;color:#036;border:none;border-radius:3px;cursor:pointer;font-size:18px;font-weight:bold;}");
+                sb.Append(".about-btn:hover{background:#f0f0f0;}");
+                sb.Append(".modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);}");
+                sb.Append(".modal-content{background:#fff;margin:10% auto;padding:24px;border-radius:8px;width:80%;max-width=600px;box-shadow:0 4px 6px rgba(0,0,0,0.3);}");
+                sb.Append(".modal-header{font-size:26px;font-weight:bold;color:#036;margin-bottom:16px;}");
+                sb.Append(".modal-body{font-size:20px;line-height:1.6;}");
+                sb.Append(".modal-body ol{margin:12px 0;padding-left:24px;}");
+                sb.Append(".modal-body li{margin:8px 0;}");
+                sb.Append(".modal-body a{color:#036;text-decoration:none;font-weight:bold;}");
+                sb.Append(".modal-body a:hover{text-decoration:underline;}");
+                // Error specific styles
+                sb.Append(".error-modal-header{font-size:26px;font-weight:bold;color:#d8000c;margin-bottom:16px;}");
+                sb.Append(".close-btn{float:right;font-size:32px;font-weight:bold;color:#999;cursor:pointer;line-height:20px;}");
+                sb.Append(".close-btn:hover{color:#000;}");
+                sb.Append(".search-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px;background:#fff;border:1px solid #ccc;border-radius:4px;}");
+                sb.Append(".search-input{flex:1;padding:6px;border:1px solid #999;border-radius:3px;font-size:24px;}");
+                sb.Append(".search-btn{padding:6px 12px;background:#0F2A44;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:24px;}");
+                sb.Append(".search-btn:hover{background:#0C1F32;}");
+                sb.Append(".ready-message{padding:24px;text-align:center;color:#666;font-size:20px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;margin:20px 0;}");
+                sb.Append("</style>");
+                sb.Append("<script>");
+                sb.Append("function doSearch(){");
+                sb.Append("  var q=document.getElementById('searchInput').value;");
+                sb.Append("  if(q){");
+                sb.Append("    window.external.SearchManual(q);");
+                sb.Append("  }");
+                sb.Append("}");
+                sb.Append("function handleSearchKeyPress(e){");
+                sb.Append("  if(e.keyCode===13||e.which===13){");
+                sb.Append("    e.preventDefault();");
+                sb.Append("    doSearch();");
+                sb.Append("    return false;");
+                sb.Append("  }");
+                sb.Append("}");
+                sb.Append("function showAbout(e){");
+                sb.Append("  if(e){e.preventDefault();e.stopPropagation();}");
+                sb.Append("  document.getElementById('aboutModal').style.display='block';");
+                sb.Append("  return false;");
+                sb.Append("}");
+                sb.Append("function closeAbout(e){");
+                sb.Append("  if(e){e.preventDefault();e.stopPropagation();}");
+                sb.Append("  document.getElementById('aboutModal').style.display='none';");
+                sb.Append("  return false;");
+                sb.Append("}");
+                // Error modal functions
+                sb.Append("function showError(){");
+                sb.Append("  document.getElementById('errorModal').style.display='block';");
+                sb.Append("}");
+                sb.Append("function closeError(e){");
+                sb.Append("  if(e){e.preventDefault();e.stopPropagation();}");
+                sb.Append("  document.getElementById('errorModal').style.display='none';");
+                sb.Append("  return false;");
+                sb.Append("}");
+                sb.Append("document.addEventListener('click',function(e){");
+                sb.Append("  var am=document.getElementById('aboutModal');");
+                sb.Append("  var em=document.getElementById('errorModal');");
+                sb.Append("  if(e.target==am){closeAbout(e);}");
+                sb.Append("  if(e.target==em){closeError(e);}");
+                sb.Append("});");
+                // Auto-show error on load
+                sb.Append("window.onload=function(){ showError(); };");
+                sb.Append("</script>");
+                sb.Append("</head><body>");
+
+                // Header with title and About button
+                sb.Append("<div class='header'>");
+                sb.Append("<div class='title-wrapper'>");
+                if (!string.IsNullOrEmpty(headerIconSrc))
+                {
+                    sb.Append("<div class='header-icon' style='background-image: url(\"").Append(headerIconSrc).Append("\"); background-size: contain; background-repeat: no-repeat;'></div>");
+                }
+                sb.Append("<h1>LegisTracerEU: Search Eur-Lex/IATE</h1>");
+                sb.Append("</div>");
+                sb.Append("<button class='about-btn' onclick='return showAbout(event);'>About</button>");
+                sb.Append("</div>");
+
+                // About Modal
+                sb.Append("<div id='aboutModal' class='modal' onclick='if(event.target==this)closeAbout(event);'>");
+                sb.Append("<div class='modal-content' onclick='event.stopPropagation();'>");
+                sb.Append("<span class='close-btn' onclick='return closeAbout(event);'>&times;</span>");
+                sb.Append("<div class='modal-header'>About LegisTracerEU</div>");
+                sb.Append("<div class='modal-body'>");
+                sb.Append("<p>To use this plugin to search EU law and terminology, you must have the LegisTracerEU app installed and running.</p>");
+                sb.Append("<p><strong>Follow these steps:</strong></p>");
+                sb.Append("<ol>");
+                sb.Append("<li>Install the app from Microsoft Store: <a href='#' onclick='window.external.OpenUrl(\"https://apps.microsoft.com/detail/9NKNVGXJFSW5\");return false;'>Download here</a></li>");
+                sb.Append("<li>Subscribe at <a href='#' onclick='window.external.OpenUrl(\"https://www.pts-translation.sk\");return false;'>www.pts-translation.sk</a></li>");
+                sb.Append("<li>Enter your email and Passkey in the app</li>");
+                sb.Append("</ol>");
+                sb.Append("<p>For more information, visit <a href='#' onclick='window.external.OpenUrl(\"https://www.pts-translation.sk\");return false;'>www.pts-translation.sk</a></p>");
+                sb.Append("<p style='margin-top:16px;font-size:14px;color:#888;font-style:italic;'>Release version 1.0.4</p>");
+                sb.Append("</div>");
+                sb.Append("</div>");
+                sb.Append("</div>");
+
+                // Error Modal
+                sb.Append("<div id='errorModal' class='modal' onclick='if(event.target==this)closeError(event);'>");
+                sb.Append("<div class='modal-content' style='border: 2px solid #d8000c;' onclick='event.stopPropagation();'>");
+                sb.Append("<span class='close-btn' onclick='return closeError(event);'>&times;</span>");
+                sb.Append("<div class='error-modal-header'>Connection Error</div>");
+                sb.Append("<div class='modal-body'>");
+                sb.Append(errorMessage);
+                sb.Append("</div>");
+                sb.Append("</div>");
+                sb.Append("</div>");
+
+                // Main Interface (Restored to "Ready" state)
+                sb.Append("<div class='search-bar'>");
+                sb.Append("<input type='text' id='searchInput' class='search-input' placeholder='Enter search term...' onkeypress='return handleSearchKeyPress(event);' />");
+                sb.Append("<button class='search-btn' onclick='doSearch()'>Search</button>");
+                sb.Append("</div>");
+
+                sb.Append("<div class='ready-message'>");
+                sb.Append("<p style='font-size:24px;margin:0 0 12px;'><strong>Ready to search</strong></p>");
+                sb.Append("<p style='margin:0;'>Navigate to a segment to see automatic results, use the search bar above or make a text selection and use the context menu to search for it.</p>");
+                sb.Append("<p style='margin-top:12px;font-size:16px;color:#d8000c;font-weight:bold;'>Last attempt failed. Check the error box.</p>");
+                sb.Append("</div>");
+
+                sb.Append("</body></html>");
+
+                viewPart.SetHtml(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"DisplayError error: {ex.Message}");
             }
         }
 
@@ -465,6 +644,7 @@ namespace Eurolex
                 sb.Append("<button class='about-btn' onclick='return showAbout(event);'>About</button>");
                 sb.Append("</div>");
 
+
                 // About Modal
                 sb.Append("<div id='aboutModal' class='modal' onclick='if(event.target==this)closeAbout(event);'>");
                 sb.Append("<div class='modal-content' onclick='event.stopPropagation();'>");
@@ -479,7 +659,6 @@ namespace Eurolex
                 sb.Append("<li>Enter your email and Passkey in the app</li>");
                 sb.Append("</ol>");
                 sb.Append("<p>For more information, visit <a href='#' onclick='window.external.OpenUrl(\"https://www.pts-translation.sk\");return false;'>www.pts-translation.sk</a></p>");
-                sb.Append("<p style='margin-top:16px;font-size:14px;color:#888;font-style:italic;'>Release version 1.0.3</p>");
                 sb.Append("</div>");
                 sb.Append("</div>");
                 sb.Append("</div>");
@@ -882,8 +1061,6 @@ namespace Eurolex
     [System.Runtime.InteropServices.ComVisibleAttribute(true)]
     public class ScriptCallbackHandler
     {
-        private static readonly HttpClient _httpClient = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:6175") };
-
         public void SetIateEnabled(bool enabled)
         {
             SendSegmentAction._iateSearchEnabled = enabled;
@@ -933,20 +1110,7 @@ namespace Eurolex
                 string target = segment?.Target?.ToString() ?? "";
                 string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-                // Build JSON payload with manual search flag
-                string json = SendSegmentAction.BuildJsonPublic(searchText, target, segmentId, timestamp, isManualSearch: true);
-                
-                using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
-                {
-                    var response = await _httpClient.PostAsync("/ingest", content).ConfigureAwait(false);
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        System.Diagnostics.Debug.WriteLine("Manual search POST failed: " + (int)response.StatusCode + " " + response.ReasonPhrase);
-                    }
-
-                    string responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    SendSegmentAction.UpdateViewPartPublic(segmentId, searchText, responseContent);
-                }
+                await SendSegmentAction.SendSegmentToIngestPublicAsync(searchText, target, segmentId, timestamp, isManualSearch: true).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
